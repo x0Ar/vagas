@@ -1,22 +1,44 @@
-var data =  require("./fakeData");
+const fs = require('fs')
 
-const getUser = ( req, res, next ) => {
-    
-    var name =  req.query.name;
+const { z, string } = require('zod')
 
-    for(let i = 0; i < data.length;  i++) {
-        if(i.name == name) {
-            res.send(data[i]);
+const getUser = (req, res) => {
+
+    try {
+        const getUserSchema = z.object({
+            name: string().min(4)
+        })
+
+        const { name } = getUserSchema.parse(req.query)
+
+        let data = fs.readFileSync('fakeData.json', 'utf-8')
+        data = JSON.parse(data)
+
+        if (data.length === 0) return res.status(400).json({ message: 'Nenhum usuário encontrado' })
+
+        let users = data.filter(value => value.name === name)
+        if (users.length > 0) {
+            return res.json(users)
+        } else {
+            return res.status(400).json({ message: 'Nenhum usuário encontrado' })
         }
+
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json(error)
+        }
+
+        return res.status(500).json({ message: 'Internal server error' })
     }
+}
 
-};
+const getUsers = (req, res, next) => {
+    let data = fs.readFileSync('fakeData.json', 'utf-8')
+    data = JSON.parse(data)
 
-const getUsers = ( req, res, next ) => {
-    
-    res.send(data);
-    
-};
+    if (data.length === 0) return res.status(400).json({ message: 'Nenhum usuário encontrado' })
+    return res.json(data)
+}
 
 module.exports = {
     getUser,
